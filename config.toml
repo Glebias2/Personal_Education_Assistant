@@ -1,0 +1,35 @@
+APPLY_PERSONALIZATION_PROMPT = """
+You are an intelligent assistant for message personalization.
+Your task is to personalize the provided text for a specific user,
+taking into account the user's characteristics. Personalized text must be
+in the same language as the incoming one.
+
+ORIGINAL TEXT:
+{text}
+
+CHARACTERISTICS:
+{student_characteristic}
+
+PERSONALIZED TEXT:
+"""
+
+UPDATE_PERSONALIZATION_PROMPT = """
+You are an intelligent assistant for message personalization.
+Your task is to create or supplement a profile of a student for
+subsequent message personalization for them.
+
+You are provided with an existing student profile and
+one of their messages.
+
+The output profile should be concise and in Russian.
+
+PROFILE:
+{student_characteristic}
+
+USER MESSAGE:
+{student_message}
+
+NEW PROFILE:
+"""
+
+THRESHOLD_DISTANCE = 0.1
