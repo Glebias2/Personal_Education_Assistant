@@ -4,7 +4,6 @@ from .models import NewCourse
 
 from settings import EducationDatabaseConfig
 from ..connection import postgre_connection
-from database.vector.repositories import StorageManager
 
 
 class CourseRepository:
@@ -35,14 +34,12 @@ class CourseRepository:
 
     @postgre_connection(__config)
     def create(self, course: NewCourse, curs: cursor = None) -> None:
-        vector_storage_id = StorageManager.create_storage()
-
         query = """
             INSERT INTO courses
-            (title, teacher_id, exam_questions, storage_id)
-            VALUES (%s, %s, %s, %s)
+            (title, teacher_id, exam_questions)
+            VALUES (%s, %s, %s)
             """
-        curs.execute(query, (course.title, course.teacher_id, course.exam_questions, vector_storage_id))
+        curs.execute(query, (course.title, course.teacher_id, course.exam_questions))
 
     @postgre_connection(__config)
     def get_storage_id(self, course_id: int, curs: cursor = None) -> str | None:

@@ -59,6 +59,32 @@ class ReportRepository:
         return reports
 
     @postgre_connection(__config)
+    def get_by_student_and_course(self, student_id: int, course_id: int, curs: cursor = None) -> list[tuple]:
+        query = """
+            SELECT r.id, c.title, l.title, r.url, r.status, r.comment
+            FROM reports AS r
+            JOIN labs AS l ON r.lab_id = l.id
+            JOIN courses AS c ON l.course_id = c.id
+            WHERE r.student_id = %s AND c.id = %s
+            """
+        curs.execute(query, (student_id, course_id))
+        return curs.fetchall()
+
+    @postgre_connection(__config)
+    def get_course_report_analytics(self, course_id: int, curs: cursor = None) -> list[tuple]:
+        query = """
+            SELECT r.student_id, s.first_name, s.last_name,
+                   l.title AS lab_title, r.status
+            FROM reports r
+            JOIN labs l ON r.lab_id = l.id
+            JOIN students s ON s.id = r.student_id
+            WHERE l.course_id = %s
+            ORDER BY r.student_id, l.number
+            """
+        curs.execute(query, (course_id,))
+        return curs.fetchall()
+
+    @postgre_connection(__config)
     def delete(self, report_id: int, curs: cursor = None) -> bool:
         # NEW FUNCTIONALITY: удаление отчёта
         query = """

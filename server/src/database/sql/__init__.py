@@ -4,5 +4,7 @@ from .repositories import (
     LabRepository,
     ReportRepository,
     StudentRepository,
-    TeacherRepository
+    TeacherRepository,
+    TestResultRepository,
+    ExamResultRepository,
 )
