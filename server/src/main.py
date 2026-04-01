@@ -1,3 +1,4 @@
+import log  # noqa: F401 — настраивает loguru до всех остальных импортов
 from api.server import start_server
 from database.sql import Database as SQLDatabase
 from database.vector import VecDatabase

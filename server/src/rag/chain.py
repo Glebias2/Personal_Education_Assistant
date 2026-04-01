@@ -1,54 +1,15 @@
-import logging
+import warnings
+warnings.filterwarnings("ignore", message=".*create_react_agent.*")
+from loguru import logger
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.prompts import (
-    ChatPromptTemplate,
-    MessagesPlaceholder,
-    HumanMessagePromptTemplate,
-    SystemMessagePromptTemplate,
-)
-from langchain_core.documents import Document
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage
+from langgraph.prebuilt import create_react_agent
 
 from settings import settings
-from database.vector.repositories import StorageManager
+from rag.tools import make_agent_tools
+from database.sql.repositories.students import StudentRepository
+from database.sql.repositories.courses import CourseRepository
 
-
-logger = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# Промпты
-# ---------------------------------------------------------------------------
-
-RAG_SYSTEM_MESSAGE = """\
-Ты — опытный университетский преподаватель.
-Ты прекрасно знаешь материал курса и объясняешь его студентам понятно и структурированно.
-
-Правила:
-- Отвечай естественно, как знающий преподаватель. НЕ ссылайся на «контекст», «документ», «предоставленные материалы» — просто объясняй.
-- Структурируй ответ: сначала краткий ответ (1-2 предложения), затем подробное объяснение.
-- Используй Markdown: заголовки, списки, **жирный** для ключевых терминов.
-- Приводи примеры и аналогии, если это помогает понять тему.
-- Если информации недостаточно для полного ответа — честно скажи об этом и предложи уточнить вопрос.
-- Отвечай на русском языке.
-
-Твои знания по теме вопроса:
-{context}"""
-
-GENERAL_SYSTEM_MESSAGE = """\
-Ты — дружелюбный AI-ассистент образовательной платформы.
-Ты помогаешь студентам с учёбой, отвечаешь на вопросы и поддерживаешь диалог.
-
-Правила:
-- Отвечай на русском языке.
-- Будь вежлив и дружелюбен.
-- Используй Markdown для структурирования ответа, если это уместно.
-- Если вопрос касается конкретного учебного материала — предложи задать вопрос точнее.
-- Можешь вести свободный диалог на общие темы."""
-
-
-# ---------------------------------------------------------------------------
-# LLM
-# ---------------------------------------------------------------------------
 
 def _get_llm():
     return ChatGoogleGenerativeAI(
@@ -58,102 +19,78 @@ def _get_llm():
     )
 
 
-# ---------------------------------------------------------------------------
-# Retrieval — гибридный поиск (BM25 + vector)
-# ---------------------------------------------------------------------------
+def _build_system_prompt(student_name: str, course_title: str) -> str:
+    return f"""\
+Ты — AI-ассистент образовательной платформы по курсу «{course_title}».
+Студент: {student_name}.
 
-def _retrieve_context(storage_id: str, question: str) -> list[Document]:
-    """Гибридный поиск: BM25 (ключевые слова) + vector (семантика).
-    Если hybrid недоступен — fallback на чистый vector search.
-    """
+Правила поведения:
+- Всегда отвечай на русском языке.
+- Используй Markdown: заголовки, списки, **жирный** для ключевых терминов.
+- Будь дружелюбен и поддерживай студента.
+- Если для ответа нужны данные — вызывай инструменты сразу, не объясняя что собираешься делать.
+
+Скилл «Разбор теста или экзамена»:
+- Сначала вызови get_my_test_results или get_my_exam_results чтобы найти нужный ID.
+- Затем вызови get_test_mistakes или get_exam_details чтобы получить детали.
+- В конце сообщения добавь: «Задай вопрос по теме которую хочешь разобрать — я найду объяснение в материалах курса.»
+
+Скилл «Помощь с лабораторной работой»:
+- Сначала вызови get_course_labs чтобы увидеть список лаб и их задания.
+- Определи нужную лабу и вызови search_course_materials с её названием и заданием.
+- Предложи структуру выполнения и ключевые концепции — помоги студенту понять, но не решай за него.
+- Если студент просит выполнить задание за него — ответь: «Это задание нужно выполнить самостоятельно. Задай конкретный вопрос по концепции и я объясню.»\
+"""
+
+
+def _log_agent_trace(messages: list, history_len: int) -> None:
+    step = 0
+    for msg in messages[history_len:]:
+        if isinstance(msg, AIMessage) and msg.tool_calls:
+            for tc in msg.tool_calls:
+                args_preview = str(tc.get("args", {}))[:120]
+                logger.debug(f"  [шаг {step}] LLM → вызов инструмента: {tc['name']}({args_preview})")
+                step += 1
+        elif isinstance(msg, ToolMessage):
+            content_preview = str(msg.content)[:500]
+            logger.debug(f"  [шаг {step}] Инструмент '{msg.name}' → результат ({len(str(msg.content))} символов):\n{content_preview}")
+            step += 1
+        elif isinstance(msg, AIMessage) and not msg.tool_calls:
+            content = msg.content
+            content_type = type(content).__name__
+            content_len = len(content) if isinstance(content, str) else len(str(content))
+            logger.debug(f"  [шаг {step}] LLM → финальный ответ ({content_len} символов, тип={content_type}): {str(content)[:300]}")
+            step += 1
+
+
+def ask(storage_id: str, question: str, history: list, student_id: int, course_id: int) -> str:
     try:
-        vector_storage = StorageManager.get_vector_storage(storage_id)
-        docs = vector_storage.hybrid_search(question, k=15, alpha=0.75)
-        logger.info(f"Hybrid search вернул {len(docs)} чанков")
-        return docs
-    except Exception as e:
-        logger.warning(f"Hybrid search недоступен ({e}), fallback на vector search")
-        try:
-            vector_storage = StorageManager.get_vector_storage(storage_id)
-            docs = vector_storage.similarity_search(question, k=15)
-            return docs
-        except Exception as e2:
-            logger.error(f"Ошибка поиска: {e2}")
-            return []
+        first, last = StudentRepository().get_first_and_last_names(student_id)
+        student_name = f"{first} {last}"
+    except Exception:
+        student_name = "студент"
+    try:
+        info = CourseRepository().get_course_info(course_id)
+        course_title = info[0][1] if info else "курс"
+    except Exception:
+        course_title = "курс"
 
-
-def _select_top_chunks(docs: list[Document], max_chunks: int = 8) -> list[Document]:
-    """Берёт топ-N чанков. Документы уже отсортированы по релевантности от Weaviate.
-    Логирует distance каждого для отладки.
-    """
-    selected = []
-    for doc in docs[:max_chunks]:
-        dist = doc.metadata.get("distance", doc.metadata.get("score", "n/a"))
-        logger.info(f"  chunk dist/score={dist} | {doc.page_content[:80]}...")
-        selected.append(doc)
-    return selected
-
-
-# ---------------------------------------------------------------------------
-# Chains
-# ---------------------------------------------------------------------------
-
-def create_rag_chain():
     llm = _get_llm()
-    prompt = ChatPromptTemplate.from_messages([
-        SystemMessagePromptTemplate.from_template(RAG_SYSTEM_MESSAGE),
-        MessagesPlaceholder(variable_name="history"),
-        HumanMessagePromptTemplate.from_template("{question}"),
-    ])
-    return prompt | llm
+    tools = make_agent_tools(student_id, course_id, storage_id)
+    agent = create_react_agent(llm, tools)
+    system_prompt = _build_system_prompt(student_name, course_title)
+    messages = [SystemMessage(content=system_prompt)] + list(history) + [HumanMessage(content=question)]
 
+    logger.info(f"▶ Agent | student={student_id} ({student_name}) course={course_id} ({course_title}) | '{question[:80]}'")
+    result = agent.invoke({"messages": messages})
 
-def create_general_chain():
-    llm = _get_llm()
-    prompt = ChatPromptTemplate.from_messages([
-        SystemMessagePromptTemplate.from_template(GENERAL_SYSTEM_MESSAGE),
-        MessagesPlaceholder(variable_name="history"),
-        HumanMessagePromptTemplate.from_template("{question}"),
-    ])
-    return prompt | llm
+    _log_agent_trace(result["messages"], len(messages))
+    new_messages = result["messages"][len(messages):]
+    logger.info(f"◀ Agent завершил | новых шагов: {sum(1 for m in new_messages if isinstance(m, (AIMessage, ToolMessage)))}")
 
-
-# ---------------------------------------------------------------------------
-# Главная функция
-# ---------------------------------------------------------------------------
-
-def ask(storage_id: str, question: str, history: list) -> str:
-    """
-    Гибридный подход:
-    1. Hybrid search (BM25 + vector) — 15 кандидатов
-    2. Берём топ-8 чанков
-    3. Если есть чанки с содержательным текстом — RAG (преподаватель-стиль)
-    4. Если нет — свободный диалог (general LLM)
-    """
-    docs = _retrieve_context(storage_id, question)
-    logger.info(f"Вопрос: '{question}' | Найдено чанков: {len(docs)}")
-
-    top = _select_top_chunks(docs, max_chunks=8)
-
-    # Проверяем есть ли реальный контент (не пустые чанки)
-    total_text = " ".join(d.page_content.strip() for d in top)
-    has_content = len(total_text) > 50
-
-    if top and has_content:
-        context_text = "\n\n---\n\n".join(d.page_content for d in top)
-        logger.info(f"RAG chain | контекст: {len(context_text)} символов из {len(top)} чанков")
-        chain = create_rag_chain()
-        response = chain.invoke({
-            "context": context_text,
-            "history": history,
-            "question": question,
-        })
-    else:
-        logger.info("General chain — нет релевантного контента")
-        chain = create_general_chain()
-        response = chain.invoke({
-            "history": history,
-            "question": question,
-        })
-
-    return response.content
+    content = result["messages"][-1].content
+    logger.debug(f"  raw content type={type(content).__name__}, value={str(content)[:300]}")
+    if isinstance(content, list):
+        content = "".join(p.get("text", "") if isinstance(p, dict) else str(p) for p in content)
+        logger.debug(f"  content after list join: {len(content)} символов")
+    return content

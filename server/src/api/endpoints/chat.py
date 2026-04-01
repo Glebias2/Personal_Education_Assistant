@@ -76,7 +76,7 @@ def send_message(chat_id: int, message: str = Form(...)):
     if not chat:
         raise HTTPException(status_code=404, detail="Chat not found")
 
-    _, _, course_id, _, _ = chat
+    _, student_id, course_id, _, _ = chat
 
     course_repository = CourseRepository()
     storage_id = course_repository.get_storage_id(course_id)
@@ -92,7 +92,7 @@ def send_message(chat_id: int, message: str = Form(...)):
         else:
             history.append(AIMessage(content=content))
 
-    response = ask(storage_id, message, history)
+    response = ask(storage_id, message, history, student_id, course_id)
 
     chat_repository.add_message(chat_id, "human", message)
     chat_repository.add_message(chat_id, "ai", response)

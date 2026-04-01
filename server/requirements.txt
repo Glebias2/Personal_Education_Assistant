@@ -30,3 +30,5 @@ natasha
 langgraph>=0.2.0
 aiohttp
 bs4
+fastmcp>=2.0.0
+mcp>=1.0.0
