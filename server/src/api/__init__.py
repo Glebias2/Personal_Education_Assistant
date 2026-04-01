@@ -9,4 +9,5 @@ from .endpoints import (
     labs,
     reports,
     chat,
+    results,
 )

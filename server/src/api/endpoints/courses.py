@@ -1,8 +1,14 @@
+import glob
 import os
+import shutil
 import tempfile
 from pathlib import Path
 from typing import List
 from fastapi import File, UploadFile
+from fastapi.responses import FileResponse
+
+UPLOADS_DIR = Path("/app/uploads")
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 from database.sql import CourseRepository
 from database.sql.repositories import NewCourse
@@ -55,14 +61,16 @@ async def upload_files_for_course(course_id: int, files: List[UploadFile] = File
 
     storage_id = course_repository.get_storage_id(course_id)
     if not storage_id:
-        raise HTTPException(status_code=404, detail="Course not found")
-
-    try:
+        storage_id = StorageManager.create_storage()
+        course_repository.update(course_id, storage_id=storage_id)
         indexer = Indexer(storage_id)
-    except ValueError:
-        new_storage_id = StorageManager.create_storage()
-        course_repository.update(course_id, storage_id=new_storage_id)
-        indexer = Indexer(new_storage_id)
+    else:
+        try:
+            indexer = Indexer(storage_id)
+        except ValueError:
+            storage_id = StorageManager.create_storage()
+            course_repository.update(course_id, storage_id=storage_id)
+            indexer = Indexer(storage_id)
 
     indexed = []
 
@@ -77,6 +85,8 @@ async def upload_files_for_course(course_id: int, files: List[UploadFile] = File
                 tmp_path = tmp.name
 
             file_id = indexer.add_file(tmp_path)
+            dest_path = UPLOADS_DIR / f"{file_id}{suffix}"
+            shutil.copy2(tmp_path, dest_path)
             course_repository.add_course_file(course_id, file.filename, file_id)
             indexed.append({"filename": file.filename, "file_id": file_id})
         except InvalidFile:
@@ -125,9 +135,29 @@ def delete_course_file(course_id: int, file_record_id: int):
         except ValueError:
             pass
 
+    # Удаляем файл с диска
+    for f in glob.glob(str(UPLOADS_DIR / f"{file_id}.*")):
+        try:
+            os.unlink(f)
+        except OSError:
+            pass
+
     # Удаляем запись из SQL
     course_repository.delete_course_file(file_record_id)
     return {"success": True}
+
+
+@app.get("/api/v1/courses/{course_id}/files/{file_id}/download", tags=["Курсы"])
+def download_course_file(course_id: int, file_id: str):
+    """Скачать файл материала курса."""
+    matches = glob.glob(str(UPLOADS_DIR / f"{file_id}.*"))
+    if not matches:
+        raise HTTPException(status_code=404, detail="File not found on disk")
+    file_path = matches[0]
+    rows = CourseRepository().get_course_files(course_id)
+    file_row = next((r for r in rows if r[2] == file_id), None)
+    filename = file_row[1] if file_row else Path(file_path).name
+    return FileResponse(file_path, filename=filename, media_type="application/octet-stream")
 
 
 @app.get("/api/v1/course/{course_id}/info", tags=["Курсы"])

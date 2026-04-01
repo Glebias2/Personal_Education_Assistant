@@ -14,6 +14,8 @@ class SessionManager:
         self.difficulty: Optional[str] = None
         self.num_questions: Optional[int] = None
         self.test_generated: bool = False
+        self.topic: Optional[str] = None
+        self.source: Optional[str] = None
 
     # Установить материал для генерации
     def set_material(self, material: str) -> None:

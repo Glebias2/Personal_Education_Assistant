@@ -18,6 +18,8 @@ class GenerateByFileRequest(BaseModel):
 # Отправка ответов на проверку
 class SubmitAnswersRequest(BaseModel):
     answers: List[str] = Field(..., description="[A, B, C, ...] ответы в порядке вопросов")
+    student_id: int = Field(..., description="ID студента")
+    course_id: int = Field(..., description="ID курса")
 
 
 # Вопрос в ответе API

@@ -5,6 +5,7 @@ from fastapi import Body, HTTPException, Path, Query, status
 from pydantic import BaseModel, Field
 
 from agents.exam.exam_agent import ExamAgent, ExamQuestion, ExamResult, ExamSession
+from database.sql.repositories.exam_results import ExamResultRepository
 
 from ..app import app
 
@@ -12,8 +13,10 @@ from ..app import app
 _exam_agent = ExamAgent()
 
 
-def _get_exam_store() -> dict[str, tuple[int, ExamSession]]:
-    """Возвращает хранилище экзаменов, лениво инициализируя его в app.state."""
+def _get_exam_store() -> dict[str, tuple[int, int, ExamSession]]:
+    """Возвращает хранилище экзаменов, лениво инициализируя его в app.state.
+    Формат: exam_id -> (course_id, student_id, session)
+    """
     state = getattr(app.state, "exams", None)
     if state is None:
         state = {}
@@ -38,6 +41,7 @@ class ExamQuestionPayload(BaseModel):
 class StartExamRequest(BaseModel):
     """Тело запроса на старт экзамена."""
 
+    student_id: int = Field(..., ge=1)
     question_count: int = Field(default=3, ge=1, le=20)
     language: str = Field(default="ru", min_length=2, max_length=8)
 
@@ -140,7 +144,7 @@ def start_exam(
 
     first_question = session.next_question()
     exam_id = str(uuid4())
-    _get_exam_store()[exam_id] = (course_id, session)
+    _get_exam_store()[exam_id] = (course_id, payload.student_id, session)
 
     return StartExamResponse(
         exam_id=exam_id,
@@ -149,21 +153,23 @@ def start_exam(
     )
 
 
-def _get_exam_or_404(course_id: int, exam_id: str) -> ExamSession:
-    """Извлекает экзамен по идентификатору или выбрасывает 404 исключение."""
+def _get_exam_or_404(course_id: int, exam_id: str) -> tuple[int, ExamSession]:
+    """Извлекает экзамен по идентификатору или выбрасывает 404.
+    Возвращает (student_id, session).
+    """
     record = _get_exam_store().get(exam_id)
     if record is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Экзамен с идентификатором {exam_id} не найден.",
         )
-    stored_course_id, session = record
+    stored_course_id, student_id, session = record
     if stored_course_id != course_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Для курса #{course_id} экзамен с идентификатором {exam_id} не найден.",
         )
-    return session
+    return student_id, session
 
 
 @app.post(
@@ -176,7 +182,7 @@ def submit_answer(
     payload: SubmitAnswerRequest = Body(...),
 ) -> SubmitAnswerResponse:
     """Принимает ответ студента, оценивает его и отдает следующий вопрос (если есть)."""
-    session = _get_exam_or_404(course_id, payload.exam_id)
+    _student_id, session = _get_exam_or_404(course_id, payload.exam_id)
     try:
         result = session.submit_answer(payload.answer)
     except ValueError as exc:
@@ -211,13 +217,60 @@ def get_exam_summary(
     exam_id: str = Query(..., min_length=1),
 ) -> ExamSummaryResponse:
     """Возвращает состояние экзамена: пройденные вопросы, активный и флаг завершения."""
-    session = _get_exam_or_404(course_id, exam_id)
+    student_id, session = _get_exam_or_404(course_id, exam_id)
     pending_question = getattr(session, "_active_question", None)
+    completed = not session.has_next_question() and pending_question is None
+
+    # Сохраняем результат в БД при завершении экзамена
+    if completed and session.results:
+        _save_exam_result(student_id, course_id, session)
 
     return ExamSummaryResponse(
         exam_id=exam_id,
         course_id=course_id,
-        completed=not session.has_next_question() and pending_question is None,
+        completed=completed,
         pending_question=_serialize_question(pending_question) if pending_question else None,
         results=[_serialize_result(result) for result in session.results],
     )
+
+
+def _save_exam_result(student_id: int, course_id: int, session: ExamSession) -> None:
+    """Сохраняет результат экзамена в БД (вызывается один раз при завершении)."""
+    # Проверяем, что ещё не сохраняли (через флаг на сессии)
+    if getattr(session, "_saved_to_db", False):
+        return
+    try:
+        answers = []
+        scores = []
+        for result in session.results:
+            score_val = None
+            if result.score is not None:
+                try:
+                    score_val = float(result.score)
+                    scores.append(score_val)
+                except (ValueError, TypeError):
+                    pass
+            answers.append({
+                "question_id": result.question.id,
+                "question_text": result.question.text,
+                "user_answer": result.user_answer,
+                "verdict": result.verdict,
+                "recommendation": result.recommendation,
+                "issues": list(result.issues),
+                "score": result.score,
+            })
+
+        avg_score = sum(scores) / len(scores) if scores else None
+
+        repo = ExamResultRepository()
+        repo.save(
+            student_id=student_id,
+            course_id=course_id,
+            total_questions=len(session.results),
+            avg_score=avg_score,
+            completed=True,
+            answers=answers,
+        )
+        session._saved_to_db = True
+    except Exception as e:
+        print(f"[EXAM] Ошибка сохранения результата: {e}")

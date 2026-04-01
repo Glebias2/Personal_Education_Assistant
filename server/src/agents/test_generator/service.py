@@ -7,6 +7,7 @@ from .processor import MaterialProcessor
 from .material_provider import MaterialProvider
 from .schemas import (GenerateByTopicRequest, GenerateByFileRequest, SubmitAnswersRequest, TestsResponse,
                       QuestionResponse, EvaluationResponseAPI)
+from database.sql.repositories.test_results import TestResultRepository
 
 # Бизнес-логика системы
 class TestService:
@@ -94,6 +95,8 @@ class TestService:
             difficulty=request.difficulty,
             num_questions=request.num_questions
         )
+        self.session.topic = request.topic
+        self.session.source = "topic"
 
         questions_response = [
             QuestionResponse(
@@ -158,6 +161,8 @@ class TestService:
             difficulty=request.difficulty,
             num_questions=request.num_questions
         )
+        self.session.topic = None
+        self.session.source = "file"
 
         # Преобразуем в API ответ
         questions_response = [
@@ -207,6 +212,36 @@ class TestService:
                 success=False,
                 error=eval_response.error
             )
+
+        # Сохраняем результат в БД
+        try:
+            answers_detail = []
+            if eval_response.results:
+                for r in eval_response.results:
+                    answers_detail.append({
+                        "question_num": r.question_num,
+                        "question_text": r.question_text,
+                        "options": r.options,
+                        "user_answer": r.user_answer,
+                        "correct_answer": r.correct_answer,
+                        "is_correct": r.is_correct,
+                    })
+
+            repo = TestResultRepository()
+            repo.save(
+                student_id=request.student_id,
+                course_id=request.course_id,
+                topic=self.session.topic,
+                source=self.session.source or "unknown",
+                difficulty=self.session.difficulty or "medium",
+                total_questions=eval_response.total_questions,
+                correct_answers=eval_response.correct_answers,
+                wrong_answers=eval_response.wrong_answers,
+                percentage=eval_response.percentage,
+                answers=answers_detail,
+            )
+        except Exception as e:
+            print(f"[TEST-SERVICE] Ошибка сохранения результата: {e}")
 
         # Преобразуем в API ответ
         return EvaluationResponseAPI(
