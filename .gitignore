@@ -1,0 +1,68 @@
+# --- Сам .gitignore и файлы CLAUDE (личные, не для GitHub) ---
+.gitignore
+CLAUDE.md
+**/CLAUDE.md
+
+# --- Секреты ---
+.env
+server/src/.env
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+*.manifest
+*.spec
+
+# --- Virtual environments ---
+venv/
+.venv/
+env/
+ENV/
+
+# --- Node.js ---
+node_modules/
+client/node_modules/
+client/dist/
+client/bun.lockb
+
+# --- IDE ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Логи ---
+*.log
+pip-log.txt
+
+# --- Тесты ---
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache/
+.pytest_cache/
+nosetests.xml
+coverage.xml
+
+# --- Misc ---
+*.bak
+*.tmp
+*.temp
+
+main_report/
+reports/
+.claude/
