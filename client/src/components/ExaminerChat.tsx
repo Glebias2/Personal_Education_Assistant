@@ -21,12 +21,13 @@ interface Message {
 interface ExaminerChatProps {
   courseId: number;
   courseTitle: string;
+  studentId: number;
   onClose: () => void;
 }
 
 type ExamState = "setup" | "in_progress" | "completed";
 
-export default function ExaminerChat({ courseId, courseTitle, onClose }: ExaminerChatProps) {
+export default function ExaminerChat({ courseId, courseTitle, studentId, onClose }: ExaminerChatProps) {
   const { toast } = useToast();
   const [examState, setExamState] = useState<ExamState>("setup");
   const [questionCount, setQuestionCount] = useState(3);
@@ -51,7 +52,7 @@ export default function ExaminerChat({ courseId, courseTitle, onClose }: Examine
       const response = await fetch(`${API_BASE_URL}/courses/${effectiveCourseId}/exam/start`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question_count: questionCount, language: "ru" })
+        body: JSON.stringify({ student_id: studentId, question_count: questionCount, language: "ru" })
       });
       if (!response.ok) throw new Error("Ошибка запуска экзамена");
 

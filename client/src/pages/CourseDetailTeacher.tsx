@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useLocation, useNavigate, useParams } from "react-router-dom"
-import { ArrowLeft, CheckCircle2, Pencil, Plus, Trash2, XCircle, Upload, FileText, Loader2 } from "lucide-react"
+import { ArrowLeft, CheckCircle2, Eye, Pencil, Plus, Search, Trash2, XCircle, Upload, FileText, Loader2 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
+import CourseAnalyticsPanel from "@/components/CourseAnalytics"
 import { getAuthUser } from "@/lib/auth"
 import {
   approveCourseRequest,
@@ -30,6 +31,12 @@ import {
   updateReport,
   uploadCourseFiles,
   deleteCourseFile,
+  getStudentTestResultsByCourse,
+  getStudentExamResultsByCourse,
+  getStudentReportsByCourse,
+  type StudentTestResult,
+  type StudentExamResult,
+  type StudentReportResult,
 } from "@/lib/api"
 
 export default function CourseDetailTeacher() {
@@ -60,6 +67,15 @@ export default function CourseDetailTeacher() {
   const [uploadingFiles, setUploadingFiles] = useState(false)
   const [courseFiles, setCourseFiles] = useState<{ id: number; filename: string; file_id: string; created_at: string }[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const [studentSearch, setStudentSearch] = useState("")
+  const [selectedStudent, setSelectedStudent] = useState<{ id: number; first_name: string; last_name: string } | null>(null)
+  const [studentDetails, setStudentDetails] = useState<{
+    tests: StudentTestResult[]
+    exams: StudentExamResult[]
+    reports: StudentReportResult[]
+  } | null>(null)
+  const [detailsLoading, setDetailsLoading] = useState(false)
 
   const loadData = async () => {
     if (!courseIdNum || !teacherId) return
@@ -226,6 +242,29 @@ export default function CourseDetailTeacher() {
   }
 
   const requestsPending = useMemo(() => requests.filter((r) => r.status === "pending"), [requests])
+
+  const filteredStudents = useMemo(
+    () => enrolledStudents.filter((s) => s.last_name.toLowerCase().includes(studentSearch.toLowerCase())),
+    [enrolledStudents, studentSearch]
+  )
+
+  const openStudentDetails = async (s: { id: number; first_name: string; last_name: string }) => {
+    setSelectedStudent(s)
+    setStudentDetails(null)
+    setDetailsLoading(true)
+    try {
+      const [testsRes, examsRes, reportsRes] = await Promise.all([
+        getStudentTestResultsByCourse(s.id, courseIdNum),
+        getStudentExamResultsByCourse(s.id, courseIdNum),
+        getStudentReportsByCourse(s.id, courseIdNum),
+      ])
+      setStudentDetails({ tests: testsRes.results, exams: examsRes.results, reports: reportsRes.reports })
+    } catch {
+      setStudentDetails({ tests: [], exams: [], reports: [] })
+    } finally {
+      setDetailsLoading(false)
+    }
+  }
   const courseDescription = useMemo(() => {
     const q = course?.exam_questions ? "Вопросы к экзамену настроены" : "Экзаменационные вопросы не настроены"
     const m = course?.storage_id || course?.vector_storage_id ? "Материалы подключены" : "Материалы не загружены"
@@ -456,11 +495,22 @@ export default function CourseDetailTeacher() {
                   <CardDescription>Все студенты, имеющие доступ к курсу</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Поиск по фамилии..."
+                      value={studentSearch}
+                      onChange={(e) => setStudentSearch(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
                   {enrolledStudents.length === 0 ? (
                     <div className="text-sm text-muted-foreground">Пока нет зачисленных студентов</div>
+                  ) : filteredStudents.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">Студент не найден</div>
                   ) : (
                     <div className="grid gap-3">
-                      {enrolledStudents.map((s) => (
+                      {filteredStudents.map((s) => (
                         <div key={s.id} className="p-4 rounded-xl border border-border bg-card/30 flex items-center justify-between">
                           <div>
                             <div className="font-medium">
@@ -468,13 +518,115 @@ export default function CourseDetailTeacher() {
                             </div>
                             <div className="text-sm text-muted-foreground">ID: {s.id}</div>
                           </div>
-                          <Badge variant="secondary">Зачислен</Badge>
+                          <div className="flex items-center gap-2">
+                            <Button size="sm" variant="outline" onClick={() => openStudentDetails(s)}>
+                              <Eye className="h-4 w-4 mr-1" />
+                              Подробнее
+                            </Button>
+                            <Badge variant="secondary">Зачислен</Badge>
+                          </div>
                         </div>
                       ))}
                     </div>
                   )}
                 </CardContent>
               </Card>
+
+              {/* Student details dialog */}
+              <Dialog open={!!selectedStudent} onOpenChange={(open) => { if (!open) setSelectedStudent(null) }}>
+                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>
+                      {selectedStudent ? `${selectedStudent.last_name} ${selectedStudent.first_name} — результаты` : ""}
+                    </DialogTitle>
+                  </DialogHeader>
+                  {detailsLoading ? (
+                    <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+                  ) : studentDetails ? (
+                    <div className="space-y-6">
+                      {/* Tests */}
+                      <div>
+                        <h3 className="font-semibold mb-2">
+                          Тесты ({studentDetails.tests.length})
+                          {studentDetails.tests.length > 0 && (
+                            <span className="ml-2 text-sm font-normal text-muted-foreground">
+                              средний %: {(studentDetails.tests.reduce((s, t) => s + t.percentage, 0) / studentDetails.tests.length).toFixed(1)}%
+                            </span>
+                          )}
+                        </h3>
+                        {studentDetails.tests.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">Тесты не проходились</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {studentDetails.tests.map((t) => (
+                              <div key={t.id} className="flex items-center justify-between text-sm p-2 rounded-lg border border-border/50">
+                                <div>
+                                  <span className="font-medium">{t.topic || "Без темы"}</span>
+                                  <span className="text-muted-foreground ml-2">· {t.difficulty}</span>
+                                </div>
+                                <div className="flex items-center gap-3 text-right">
+                                  <span>{t.correct_answers}/{t.total_questions} ({t.percentage.toFixed(1)}%)</span>
+                                  <span className="text-muted-foreground text-xs">{String(t.created_at).split("T")[0].split(" ")[0]}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Exams */}
+                      <div>
+                        <h3 className="font-semibold mb-2">Экзамены ({studentDetails.exams.length})</h3>
+                        {studentDetails.exams.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">Экзамены не сдавались</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {studentDetails.exams.map((e) => (
+                              <div key={e.id} className="flex items-center justify-between text-sm p-2 rounded-lg border border-border/50">
+                                <div className="flex items-center gap-2">
+                                  <span>{e.total_questions} вопросов</span>
+                                  <Badge variant={e.completed ? "default" : "secondary"} className="text-xs">
+                                    {e.completed ? "Завершён" : "Не завершён"}
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <span>{e.avg_score !== null ? `${e.avg_score.toFixed(1)}/100` : "—"}</span>
+                                  <span className="text-muted-foreground text-xs">{String(e.created_at).split("T")[0].split(" ")[0]}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Reports */}
+                      <div>
+                        <h3 className="font-semibold mb-2">Лабораторные ({studentDetails.reports.length})</h3>
+                        {studentDetails.reports.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">Отчёты не загружены</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {studentDetails.reports.map((r) => (
+                              <div key={r.id} className="flex items-start justify-between text-sm p-2 rounded-lg border border-border/50">
+                                <div>
+                                  <span className="font-medium">{r.lab_title}</span>
+                                  {r.comment && <p className="text-muted-foreground text-xs mt-0.5">{r.comment}</p>}
+                                </div>
+                                <Badge
+                                  variant={r.status === "approved" ? "default" : r.status === "pending" ? "outline" : "destructive"}
+                                  className={r.status === "approved" ? "bg-green-500 text-white" : r.status === "pending" ? "border-yellow-500 text-yellow-600" : ""}
+                                >
+                                  {r.status === "approved" ? "Принято" : r.status === "pending" ? "На проверке" : "Не принято"}
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : null}
+                </DialogContent>
+              </Dialog>
 
               <Card className="border-border/50 shadow-lg">
                 <CardHeader>
@@ -562,17 +714,7 @@ export default function CourseDetailTeacher() {
           </TabsContent>
 
           <TabsContent value="stats" className="mt-6">
-            <Card className="border-border/50 shadow-lg">
-              <CardHeader>
-                <CardTitle>Статистика и оценки</CardTitle>
-                <CardDescription>Пока заглушка (добавим позже)</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="p-6 rounded-xl border border-dashed border-border text-sm text-muted-foreground">
-                  Здесь будет: средний балл, прогресс по лабам, рейтинг студентов, графики.
-                </div>
-              </CardContent>
-            </Card>
+            <CourseAnalyticsPanel courseId={courseIdNum} />
           </TabsContent>
         </Tabs>
       </main>

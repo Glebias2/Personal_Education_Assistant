@@ -34,7 +34,8 @@ export default function StudentDashboard() {
       const coursesData = await getStudentCoursesById(studentId)
       setCourses(coursesData)
       const all = await listAllCourses()
-      setCatalog(all)
+      const enrolledIds = new Set(coursesData.map((c) => c.id))
+      setCatalog(all.filter((c) => !enrolledIds.has(c.id)))
     } catch (error) {
       toast({ title: "Ошибка загрузки", variant: "destructive" })
     } finally {

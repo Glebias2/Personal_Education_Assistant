@@ -234,7 +234,7 @@ export default function TestingInterface({ courseId, studentId, onClose }: Testi
       const response = await fetch(`${API_BASE_URL}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers: answersArray })
+        body: JSON.stringify({ answers: answersArray, student_id: studentId, course_id: courseId })
       });
 
       if (!response.ok) {

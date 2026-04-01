@@ -12,7 +12,7 @@ import { getCourseById, getCourseLabs, getCourseFiles, addReport } from "@/lib/a
 import type { CourseFileInfo } from "@/lib/api";
 import { getAuthUser } from "@/lib/auth";
 import { Course, Lab } from "@/types/models";
-import { ArrowLeft, AlertCircle, ClipboardCheck, GraduationCap, FileText } from "lucide-react";
+import { ArrowLeft, AlertCircle, ClipboardCheck, Download, GraduationCap, FileText } from "lucide-react";
 import AIAssistantChat from "@/components/AIAssistantChat";
 import TestingInterface from "@/components/TestingInterface";
 import ExaminerChat from "@/components/ExaminerChat";
@@ -154,10 +154,19 @@ export default function CourseDetailStudent() {
                     {courseFiles.map((f) => (
                       <div key={f.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card/30">
                         <FileText className="h-5 w-5 text-primary shrink-0" />
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <div className="text-sm font-medium truncate">{f.filename}</div>
                           <div className="text-xs text-muted-foreground">{new Date(f.created_at).toLocaleDateString("ru-RU")}</div>
                         </div>
+                        <a
+                          href={`http://localhost:8000/api/v1/courses/${courseId}/files/${f.file_id}/download`}
+                          download={f.filename}
+                          className="shrink-0"
+                        >
+                          <Button size="sm" variant="ghost">
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </a>
                       </div>
                     ))}
                   </div>
@@ -278,6 +287,7 @@ export default function CourseDetailStudent() {
               <ExaminerChat
                 courseId={parseInt(courseId!)}
                 courseTitle={course.title}
+                studentId={user!.id}
                 onClose={() => setTestMode("none")}
               />
             )}
