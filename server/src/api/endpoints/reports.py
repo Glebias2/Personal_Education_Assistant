@@ -1,8 +1,8 @@
 from database.sql import ReportRepository
 
 from ..app import app
-from ..models import SetReportStatusModel
-from database.sql.repositories import ReportStatus
+from ..schemas.reports import SetReportStatusModel
+from models.enums import ReportStatus
 
 @app.get("/api/v1/courses/{teacher_id}/pending_reports", tags=["Отчёты"])
 async def get_pending_reports_for_teacher_legacy(teacher_id: int):

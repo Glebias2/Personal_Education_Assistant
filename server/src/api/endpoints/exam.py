@@ -4,7 +4,8 @@ from uuid import uuid4
 from fastapi import Body, HTTPException, Path, Query, status
 from pydantic import BaseModel, Field
 
-from agents.exam.exam_agent import ExamAgent, ExamQuestion, ExamResult, ExamSession
+from agents.exam.exam_agent import ExamAgent
+from models.exam import ExamQuestion, ExamResult, ExamSession
 from database.sql.repositories.exam_results import ExamResultRepository
 
 from ..app import app

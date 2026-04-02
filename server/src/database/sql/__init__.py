@@ -7,4 +7,5 @@ from .repositories import (
     TeacherRepository,
     TestResultRepository,
     ExamResultRepository,
+    RecommendationRepository,
 )

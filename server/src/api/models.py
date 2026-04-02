@@ -27,9 +27,15 @@ class RegisterStudentModel(BaseModel):
     first_name: str
     last_name: str
     characteristic: str | None = None
+    interests: list[str] = []
 
 
 class SetReportStatusModel(BaseModel):
     # NEW FUNCTIONALITY: смена статуса отчёта
     status: str
     comment: str | None = None
+
+
+class RateCourseModel(BaseModel):
+    student_id: int
+    rating: int  # 1-5

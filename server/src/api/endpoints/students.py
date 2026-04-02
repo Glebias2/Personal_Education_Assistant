@@ -1,9 +1,9 @@
 from fastapi import HTTPException
 
-from database.sql import StudentRepository
+from database.sql import StudentRepository, RecommendationRepository
 
 from ..app import app
-from ..models import Authentication, RegisterStudentModel
+from ..schemas.auth import Authentication, RegisterStudentModel
 
 
 @app.post("/students/auth", tags=["Студенты"])
@@ -27,6 +27,9 @@ async def students_register(payload: RegisterStudentModel):
         last_name=payload.last_name,
         characteristic=payload.characteristic,
     )
+
+    if payload.interests:
+        RecommendationRepository().set_student_interests(student_id, payload.interests)
 
     return {"success": True, "student_id": student_id}
 

@@ -6,8 +6,11 @@ from .endpoints import (
     test_system,
     verification,
     courses,
+    course_files,
+    course_requests,
     labs,
     reports,
     chat,
     results,
+    recommendations,
 )

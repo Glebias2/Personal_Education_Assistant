@@ -1,6 +1,6 @@
 from psycopg2.extensions import cursor
 
-from .models import NewLab
+from models.lab import NewLab
 
 from settings import EducationDatabaseConfig
 from ..connection import postgre_connection

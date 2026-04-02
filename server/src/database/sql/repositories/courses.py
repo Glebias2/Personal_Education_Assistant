@@ -1,6 +1,6 @@
 from psycopg2.extensions import cursor
 
-from .models import NewCourse
+from models.course import NewCourse
 
 from settings import EducationDatabaseConfig
 from ..connection import postgre_connection
@@ -33,13 +33,18 @@ class CourseRepository:
         return courses
 
     @postgre_connection(__config)
-    def create(self, course: NewCourse, curs: cursor = None) -> None:
+    def create(self, course: NewCourse, curs: cursor = None) -> int:
         query = """
             INSERT INTO courses
-            (title, teacher_id, exam_questions)
-            VALUES (%s, %s, %s)
+            (title, teacher_id, exam_questions, description, difficulty)
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING id
             """
-        curs.execute(query, (course.title, course.teacher_id, course.exam_questions))
+        curs.execute(query, (
+            course.title, course.teacher_id, course.exam_questions,
+            course.description, course.difficulty,
+        ))
+        return curs.fetchone()[0]
 
     @postgre_connection(__config)
     def get_storage_id(self, course_id: int, curs: cursor = None) -> str | None:
@@ -66,7 +71,8 @@ class CourseRepository:
     @postgre_connection(__config)
     def get_course_info(self, course_id: int, curs: cursor = None) -> str | None:
         query = """
-            SELECT id, title, teacher_id, exam_questions, storage_id
+            SELECT id, title, teacher_id, exam_questions, storage_id,
+                   description, difficulty, created_at
             FROM courses
             WHERE id = %s
             """
@@ -87,10 +93,10 @@ class CourseRepository:
         return curses_info
 
     @postgre_connection(__config)
-    def list_all(self, curs: cursor = None) -> list[tuple[int, str, int]]:
+    def list_all(self, curs: cursor = None) -> list[tuple]:
         # NEW FUNCTIONALITY: список всех курсов (для витрины студенту)
         query = """
-            SELECT id, title, teacher_id
+            SELECT id, title, teacher_id, description, difficulty, created_at
             FROM courses
             ORDER BY id DESC
             """
@@ -177,6 +183,8 @@ class CourseRepository:
         title: str | None = None,
         exam_questions: str | None = None,
         storage_id: str | None = None,
+        description: str | None = None,
+        difficulty: str | None = None,
         curs: cursor = None,
     ) -> bool:
         # NEW FUNCTIONALITY: обновление курса (для совместимости с текущим фронтом)
@@ -185,11 +193,13 @@ class CourseRepository:
             SET
                 title = COALESCE(%s, title),
                 exam_questions = COALESCE(%s, exam_questions),
-                storage_id = COALESCE(%s, storage_id)
+                storage_id = COALESCE(%s, storage_id),
+                description = COALESCE(%s, description),
+                difficulty = COALESCE(%s, difficulty)
             WHERE id = %s
             RETURNING id
             """
-        curs.execute(query, (title, exam_questions, storage_id, course_id))
+        curs.execute(query, (title, exam_questions, storage_id, description, difficulty, course_id))
         return bool(curs.fetchone())
 
     @postgre_connection(__config)

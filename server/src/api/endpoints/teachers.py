@@ -3,7 +3,7 @@ from fastapi import HTTPException
 from database.sql import TeacherRepository
 
 from ..app import app
-from ..models import Authentication, RegisterTeacherModel
+from ..schemas.auth import Authentication, RegisterTeacherModel
 
 
 @app.post("/teachers/auth", tags=["Преподаватели"])

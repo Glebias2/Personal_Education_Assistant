@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from enums import VerificationStatus
-from database.sql.repositories import LabRepository, ReportRepository, NewReport
+from models.enums import VerificationStatus
+from models.report import NewReport
+from database.sql.repositories import LabRepository, ReportRepository
 from database.vector.repositories import ReportIndex
 from agents.verification import VerificationAgent
 from agents.verification.parser import ReportDownloader
-from api.models import AddReportModel
+from api.schemas.reports import AddReportModel
 
 from ..app import app
 

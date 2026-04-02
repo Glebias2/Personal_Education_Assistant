@@ -1,9 +1,9 @@
 from langgraph.graph import StateGraph, START, END
 
-from .models import Report
+from models.report import Report
 from .normalizer import TextNormalizer
 from .simhash import create_simhash_vector
-from enums import VerificationStatus
+from models.enums import VerificationStatus
 from database.vector.repositories import ReportIndex
 from settings import VerificationModuleSettings
 from .nodes import (

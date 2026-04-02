@@ -2,7 +2,8 @@ from psycopg2.extensions import cursor
 from settings import EducationDatabaseConfig
 
 from ..connection import postgre_connection
-from .models import NewReport, ReportStatus
+from models.report import NewReport
+from models.enums import ReportStatus
 
 
 

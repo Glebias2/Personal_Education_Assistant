@@ -416,6 +416,72 @@ for student_id, lab_id, url, status in reports_data:
 
 print(f"  Отчёты: {len(reports_data)} записей.")
 
+# ── Описания и сложность курсов ───────────────────────────────────────────────
+course_descriptions = {
+    c1: ("Изучение принципов объектно-ориентированного программирования: инкапсуляция, наследование, полиморфизм, абстракция и паттерны проектирования.", "intermediate"),
+    c2: ("Реляционные базы данных, SQL, нормализация, транзакции, индексы и оптимизация запросов в PostgreSQL.", "intermediate"),
+    c3: ("Модель OSI, стек TCP/IP, протоколы прикладного уровня, маршрутизация и конфигурация сетей.", "intermediate"),
+    c4: ("Управление процессами и потоками, работа с памятью, файловые системы и механизмы синхронизации.", "advanced"),
+    c5: ("Анализ сложности алгоритмов, сортировки, деревья поиска, графы и динамическое программирование.", "advanced"),
+    c6: ("HTML/CSS, JavaScript, REST API, современные фреймворки и создание веб-приложений.", "beginner"),
+    c7: ("Теория вероятностей, случайные величины, распределения, проверка статистических гипотез.", "intermediate"),
+    c8: ("Криптография, PKI, анализ уязвимостей, защита данных и сетевая безопасность.", "advanced"),
+}
+for cid, (desc, diff) in course_descriptions.items():
+    cur.execute(
+        "UPDATE courses SET description = %s, difficulty = %s WHERE id = %s",
+        (desc, diff, cid),
+    )
+print("  Описания и сложность курсов обновлены.")
+
+# ── Теги курсов ───────────────────────────────────────────────────────────────
+course_tags_data = {
+    c1: ["программирование"],
+    c2: ["базы данных", "программирование"],
+    c3: ["сети"],
+    c4: ["ОС"],
+    c5: ["алгоритмы", "программирование"],
+    c6: ["web", "программирование"],
+    c7: ["математика"],
+    c8: ["безопасность", "сети"],
+}
+for cid, tags in course_tags_data.items():
+    for tag in tags:
+        cur.execute(
+            "INSERT INTO course_tags (course_id, tag) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+            (cid, tag),
+        )
+print("  Теги курсов созданы.")
+
+# ── Интересы студентов ────────────────────────────────────────────────────────
+student_interests_data = {
+    s1: ["программирование", "сети", "безопасность"],
+    s2: ["программирование", "базы данных", "web", "AI/ML"],
+    s3: ["алгоритмы", "программирование", "web"],
+    s4: ["web", "мобильная разработка", "программирование"],
+}
+for sid, interests in student_interests_data.items():
+    for tag in interests:
+        cur.execute(
+            "INSERT INTO student_interests (student_id, tag) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+            (sid, tag),
+        )
+print("  Интересы студентов созданы.")
+
+# ── Рейтинги курсов ──────────────────────────────────────────────────────────
+ratings_data = [
+    (s1, c1, 5), (s1, c2, 4), (s1, c3, 5),
+    (s2, c1, 4), (s2, c2, 5), (s2, c5, 4), (s2, c6, 5),
+    (s3, c1, 3), (s3, c3, 5), (s3, c5, 5),
+    (s4, c1, 5), (s4, c2, 4), (s4, c5, 3), (s4, c6, 5),
+]
+for sid, cid, rating in ratings_data:
+    cur.execute(
+        "INSERT INTO course_ratings (student_id, course_id, rating) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
+        (sid, cid, rating),
+    )
+print("  Рейтинги курсов созданы.")
+
 conn.commit()
 cur.close()
 conn.close()
