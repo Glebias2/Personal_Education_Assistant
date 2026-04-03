@@ -64,7 +64,7 @@ export default function LandingPage() {
             ) : (
               <>
                 <Button variant="ghost" size="sm" onClick={() => navigate("/auth")}>Войти</Button>
-                <Button size="sm" onClick={() => navigate("/auth")}>Начать бесплатно</Button>
+                <Button size="sm" onClick={() => navigate("/auth")}>Начать сейчас</Button>
               </>
             )}
           </div>
@@ -193,7 +193,7 @@ export default function LandingPage() {
       </section>
 
       <footer className="border-t border-border/50 py-8 px-6 text-center text-sm text-muted-foreground">
-        БГУИР · Personal Agentic Assistant · 2025
+        БГУИР · Personal Agentic Assistant · 2026
       </footer>
     </div>
   )
