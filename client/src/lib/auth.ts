@@ -1,4 +1,4 @@
-import type { AuthUser, UserRole } from "@/types/models"
+import type { AuthUser, UserRole } from "@/types"
 
 const AUTH_STORAGE_KEY = "paa_auth_user"
 
@@ -99,6 +99,7 @@ export async function registerUser(payload: {
   first_name: string
   last_name: string
   characteristic?: string
+  interests?: string[]
 }) {
   // NEW FUNCTIONALITY: регистрация через API
   if (payload.role === "teacher") {
@@ -121,6 +122,7 @@ export async function registerUser(payload: {
       first_name: payload.first_name,
       last_name: payload.last_name,
       characteristic: payload.characteristic,
+      interests: payload.interests || [],
     }),
   })
 }

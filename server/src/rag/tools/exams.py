@@ -1,7 +1,7 @@
 from loguru import logger
 from langchain_core.tools import tool
 
-from database.sql.repositories.exam_results import ExamResultRepository
+from rag.queries import query_exam_results, query_exam_details
 
 
 def make_exam_tools(student_id: int, course_id: int):
@@ -15,20 +15,19 @@ def make_exam_tools(student_id: int, course_id: int):
         """
         logger.debug(f"    → get_my_exam_results(student_id={student_id}, course_id={course_id})")
         try:
-            rows = ExamResultRepository().get_by_student_and_course(student_id, course_id)
-            if not rows:
+            results = query_exam_results(student_id, course_id)
+            if not results:
                 logger.debug("    ← get_my_exam_results: нет результатов")
                 return "У студента пока нет результатов экзаменов по этому курсу."
             lines = ["Результаты экзаменов студента:"]
-            for row in rows:
-                exam_id, total_q, avg_score, completed, created_at = row
-                score_str = f"{avg_score:.1f}/100" if avg_score is not None else "не завершён"
+            for r in results:
+                score_str = f"{r['avg_score']:.1f}/100" if r["avg_score"] is not None else "не завершён"
                 lines.append(
-                    f"- ID {exam_id} | Вопросов: {total_q} | Средний балл: {score_str} "
-                    f"| Завершён: {'да' if completed else 'нет'} | Дата: {created_at}"
+                    f"- ID {r['id']} | Вопросов: {r['total_questions']} | Средний балл: {score_str} "
+                    f"| Завершён: {'да' if r['completed'] else 'нет'} | Дата: {r['created_at']}"
                 )
             result = "\n".join(lines)
-            logger.debug(f"    ← get_my_exam_results: {len(rows)} экзаменов")
+            logger.debug(f"    ← get_my_exam_results: {len(results)} экзаменов")
             return result
         except Exception as e:
             logger.error(f"    ← get_my_exam_results ERROR: {e}")
@@ -44,21 +43,20 @@ def make_exam_tools(student_id: int, course_id: int):
         """
         logger.debug(f"    → get_exam_details(exam_result_id={exam_result_id})")
         try:
-            rows = ExamResultRepository().get_answers(exam_result_id)
-            if not rows:
-                logger.debug(f"    ← get_exam_details: не найдено")
+            details = query_exam_details(exam_result_id)
+            if not details:
+                logger.debug("    ← get_exam_details: не найдено")
                 return f"Детали экзамена ID {exam_result_id} не найдены."
             lines = [f"Детали экзамена ID {exam_result_id}:"]
-            for row in rows:
-                q_id, q_text, user_ans, verdict, recommendation, issues, score = row
+            for d in details:
                 lines.append(
-                    f"\nВопрос {q_id}: {q_text}\n"
-                    f"  Ответ: {user_ans}\n"
-                    f"  Вердикт: {verdict} | Балл: {score}/100\n"
-                    f"  Рекомендация: {recommendation}"
+                    f"\nВопрос {d['question_id']}: {d['question_text']}\n"
+                    f"  Ответ: {d['user_answer']}\n"
+                    f"  Вердикт: {d['verdict']} | Балл: {d['score']}/100\n"
+                    f"  Рекомендация: {d['recommendation']}"
                 )
             result = "\n".join(lines)
-            logger.debug(f"    ← get_exam_details: {len(rows)} вопросов")
+            logger.debug(f"    ← get_exam_details: {len(details)} вопросов")
             return result
         except Exception as e:
             logger.error(f"    ← get_exam_details ERROR: {e}")

@@ -1,7 +1,7 @@
 from loguru import logger
 from langchain_core.tools import tool
 
-from database.vector.repositories.storage import StorageManager
+from rag.queries import query_search_materials
 
 
 def make_search_tool(storage_id: str):
@@ -15,13 +15,12 @@ def make_search_tool(storage_id: str):
         """
         logger.debug(f"    → search_course_materials(query='{query[:80]}')")
         try:
-            vector_storage = StorageManager.get_vector_storage(storage_id)
-            docs = vector_storage.hybrid_search(query, k=8, alpha=0.75)
-            if not docs:
+            chunks = query_search_materials(storage_id, query)
+            if not chunks:
                 logger.debug("    ← search_course_materials: ничего не найдено")
                 return "По запросу ничего не найдено в материалах курса."
-            result = "\n\n---\n\n".join(doc.page_content for doc in docs)
-            logger.debug(f"    ← search_course_materials: {len(docs)} чанков, {len(result)} символов")
+            result = "\n\n---\n\n".join(chunks)
+            logger.debug(f"    ← search_course_materials: {len(chunks)} чанков, {len(result)} символов")
             return result
         except Exception as e:
             logger.error(f"    ← search_course_materials ERROR: {e}")

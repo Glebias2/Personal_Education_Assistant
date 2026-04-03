@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { TestQuestion, TestGenerationResponse, TestSubmitResponse, FileUploadResponse } from "@/types/models";
+import { TestQuestion, TestGenerationResponse, TestSubmitResponse, FileUploadResponse } from "@/types";
 import { ArrowLeft, ArrowRight, CheckCircle, XCircle, Loader2, Upload, FileText, BookOpen } from "lucide-react";
 
 /**
@@ -85,7 +85,7 @@ export default function TestingInterface({ courseId, studentId, onClose }: Testi
       const formData = new FormData();
       formData.append("file", file);
 
-      const response = await fetch(`${API_BASE_URL}/upload`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/tests/upload`, {
         method: "POST",
         body: formData
       });
@@ -124,7 +124,7 @@ export default function TestingInterface({ courseId, studentId, onClose }: Testi
 
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/generate-by-topic`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/tests/generate-by-topic`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -176,7 +176,7 @@ export default function TestingInterface({ courseId, studentId, onClose }: Testi
 
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/generate-by-file`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/tests/generate-by-file`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -231,7 +231,7 @@ export default function TestingInterface({ courseId, studentId, onClose }: Testi
       // Формируем массив ответов в порядке вопросов
       const answersArray = questions.map(q => answers[q.question_num] || "");
 
-      const response = await fetch(`${API_BASE_URL}/submit`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/tests/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ answers: answersArray, student_id: studentId, course_id: courseId })
@@ -269,7 +269,7 @@ export default function TestingInterface({ courseId, studentId, onClose }: Testi
    */
   const handleExit = async () => {
     try {
-      await fetch(`${API_BASE_URL}/reset`, { method: "POST" });
+      await fetch(`${API_BASE_URL}/api/v1/tests/reset`, { method: "POST" });
     } catch (error) {
       // Игнорируем ошибки при сбросе
     }

@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getCourseById, getCourseLabs, getCourseFiles, addReport } from "@/lib/api";
 import type { CourseFileInfo } from "@/lib/api";
 import { getAuthUser } from "@/lib/auth";
-import { Course, Lab } from "@/types/models";
+import { Course, Lab } from "@/types";
 import { ArrowLeft, AlertCircle, ClipboardCheck, Download, GraduationCap, FileText } from "lucide-react";
 import AIAssistantChat from "@/components/AIAssistantChat";
 import TestingInterface from "@/components/TestingInterface";

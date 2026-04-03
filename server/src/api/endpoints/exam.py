@@ -118,7 +118,7 @@ def _serialize_result(result: ExamResult) -> ExamResultPayload:
 
 
 @app.post(
-    "/courses/{course_id}/exam/start",
+    "/api/v1/courses/{course_id}/exam/start",
     response_model=StartExamResponse,
     status_code=status.HTTP_201_CREATED,
     tags=["Экзамен"],
@@ -174,7 +174,7 @@ def _get_exam_or_404(course_id: int, exam_id: str) -> tuple[int, ExamSession]:
 
 
 @app.post(
-    "/courses/{course_id}/exam/answer",
+    "/api/v1/courses/{course_id}/exam/answer",
     response_model=SubmitAnswerResponse,
     tags=["Экзамен"],
 )
@@ -209,7 +209,7 @@ def submit_answer(
 
 
 @app.get(
-    "/courses/{course_id}/summary",
+    "/api/v1/courses/{course_id}/summary",
     response_model=ExamSummaryResponse,
     tags=["Экзамен"],
 )

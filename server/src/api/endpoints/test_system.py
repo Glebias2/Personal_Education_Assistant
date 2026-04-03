@@ -23,7 +23,7 @@ processor = MaterialProcessor()
 
 
 # Проверка статуса API
-@app.get("/health", response_model=HealthResponse, tags=["Тестирование"])
+@app.get("/api/v1/tests/health", response_model=HealthResponse, tags=["Тестирование"])
 async def health_check():
     return HealthResponse(
         status="healthy",
@@ -31,7 +31,7 @@ async def health_check():
     )
 
 # Загрузка файла
-@app.post("/upload", tags=["Тестирование"])
+@app.post("/api/v1/tests/upload", tags=["Тестирование"])
 async def upload_file(file: UploadFile = File(...)):
     temp_path = None
 
@@ -66,7 +66,7 @@ async def upload_file(file: UploadFile = File(...)):
             temp_path.unlink()
 
 # Генерация теста по теме из БД
-@app.post("/generate-by-topic", response_model=TestsResponse, tags=["Тестирование"])
+@app.post("/api/v1/tests/generate-by-topic", response_model=TestsResponse, tags=["Тестирование"])
 async def generate_tests_by_topic(request: GenerateByTopicRequest):
     try:
         # Используем сервис который теперь получает материал из БД
@@ -86,7 +86,7 @@ async def generate_tests_by_topic(request: GenerateByTopicRequest):
 
 
 # Генерация теста из файла
-@app.post("/generate-by-file", response_model=TestsResponse, tags=["Тестирование"])
+@app.post("/api/v1/tests/generate-by-file", response_model=TestsResponse, tags=["Тестирование"])
 async def generate_tests_by_file(request: GenerateByFileRequest):
     try:
         response = service.generate_by_file(request)
@@ -102,7 +102,7 @@ async def generate_tests_by_file(request: GenerateByFileRequest):
         )
 
 # Проверка ответов на тест
-@app.post("/submit", response_model=EvaluationResponseAPI, tags=["Тестирование"])
+@app.post("/api/v1/tests/submit", response_model=EvaluationResponseAPI, tags=["Тестирование"])
 async def submit_answers(request: SubmitAnswersRequest):
     try:
         response = service.submit_answers(request)
@@ -117,7 +117,7 @@ async def submit_answers(request: SubmitAnswersRequest):
         )
 
 # Получаем статус сессии
-@app.get("/status", tags=["Тестирование"])
+@app.get("/api/v1/tests/status", tags=["Тестирование"])
 async def get_status():
     try:
         return service.get_status()
@@ -126,7 +126,7 @@ async def get_status():
         return {"error": str(e)}
 
 # Сбросить сессию
-@app.post("/reset", response_model=ResetResponse, tags=["Тестирование"])
+@app.post("/api/v1/tests/reset", response_model=ResetResponse, tags=["Тестирование"])
 async def reset_session():
     try:
         result = service.reset_session()

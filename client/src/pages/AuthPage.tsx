@@ -4,6 +4,8 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { GraduationCap, UserCircle, LogIn } from "lucide-react"
+import TagPicker from "@/components/TagPicker"
+import { getAvailableTags } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 import { getAuthUser, loginByCredentials, registerUser } from "@/lib/auth"
-import type { UserRole } from "@/types/models"
+import type { UserRole } from "@/types"
 
 export default function AuthPage() {
   const navigate = useNavigate()
@@ -27,6 +29,13 @@ export default function AuthPage() {
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [characteristic, setCharacteristic] = useState("")
+  const [availableTags, setAvailableTags] = useState<string[]>([])
+  const [selectedInterests, setSelectedInterests] = useState<string[]>([])
+
+  // Загружаем теги для выбора интересов
+  useEffect(() => {
+    getAvailableTags().then((r) => setAvailableTags(r.tags)).catch(() => {})
+  }, [])
 
   // Проверяем, не авторизован ли уже пользователь
   useEffect(() => {
@@ -58,6 +67,7 @@ export default function AuthPage() {
           first_name: firstName.trim(),
           last_name: lastName.trim(),
           characteristic: role === "student" ? (characteristic.trim() || undefined) : undefined,
+          interests: role === "student" ? selectedInterests : undefined,
         })
 
         toast({ title: "Регистрация успешна", description: "Теперь выполните вход" })
@@ -95,6 +105,7 @@ export default function AuthPage() {
     setFirstName("")
     setLastName("")
     setCharacteristic("")
+    setSelectedInterests([])
   }
 
   // Пока проверяем авторизацию, показываем лоадер
@@ -214,6 +225,15 @@ export default function AuthPage() {
                             onChange={(e) => setCharacteristic(e.target.value)}
                           />
                         </div>
+                        {availableTags.length > 0 && (
+                          <TagPicker
+                            availableTags={availableTags}
+                            selectedTags={selectedInterests}
+                            onChange={setSelectedInterests}
+                            maxTags={5}
+                            label="Интересы (выберите категории)"
+                          />
+                        )}
                       </>
                     )}
 

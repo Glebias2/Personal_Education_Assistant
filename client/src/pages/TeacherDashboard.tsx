@@ -10,7 +10,11 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { getAuthUser, logout } from "@/lib/auth"
 import { getTeacherCourses, createCourseAPI } from "@/lib/api"
-import type { AuthUser, CourseShort } from "@/types/models"
+import type { AuthUser, CourseShort } from "@/types"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import TagPicker from "@/components/TagPicker"
+import { getAvailableTags } from "@/lib/api"
 import { LogOut, Plus, BookOpen, X, ArrowRight } from "lucide-react"
 
 export default function TeacherDashboard() {
@@ -20,6 +24,10 @@ export default function TeacherDashboard() {
   const [courses, setCourses] = useState<CourseShort[]>([])
   const [loading, setLoading] = useState(true)
   const [newCourseTitle, setNewCourseTitle] = useState("")
+  const [newCourseDescription, setNewCourseDescription] = useState("")
+  const [newCourseDifficulty, setNewCourseDifficulty] = useState("intermediate")
+  const [newCourseTags, setNewCourseTags] = useState<string[]>([])
+  const [availableTags, setAvailableTags] = useState<string[]>([])
   const [questions, setQuestions] = useState<string[]>([""])
   const [dialogOpen, setDialogOpen] = useState(false)
 
@@ -31,6 +39,7 @@ export default function TeacherDashboard() {
     }
     setUser(authUser)
     loadData(authUser.id)
+    getAvailableTags().then((r) => setAvailableTags(r.tags)).catch(() => {})
   }, [navigate])
 
   /**
@@ -72,10 +81,16 @@ export default function TeacherDashboard() {
         title: newCourseTitle,
         teacher_id: user.id.toString(),
         exam_questions: examQuestionsFormatted,
+        description: newCourseDescription.trim() || undefined,
+        difficulty: newCourseDifficulty,
+        tags: newCourseTags,
       })
 
       toast({ title: "Курс создан" })
       setNewCourseTitle("")
+      setNewCourseDescription("")
+      setNewCourseDifficulty("intermediate")
+      setNewCourseTags([])
       setQuestions([""])
       setDialogOpen(false)
       loadData(user.id)
@@ -163,6 +178,37 @@ export default function TeacherDashboard() {
                         className="mt-1.5"
                       />
                     </div>
+                    <div>
+                      <Label>Описание курса</Label>
+                      <Textarea
+                        value={newCourseDescription}
+                        onChange={(e) => setNewCourseDescription(e.target.value)}
+                        placeholder="Краткое описание курса"
+                        className="mt-1.5"
+                        rows={3}
+                      />
+                    </div>
+                    <div>
+                      <Label>Сложность</Label>
+                      <Select value={newCourseDifficulty} onValueChange={setNewCourseDifficulty}>
+                        <SelectTrigger className="mt-1.5">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="beginner">Начальный</SelectItem>
+                          <SelectItem value="intermediate">Средний</SelectItem>
+                          <SelectItem value="advanced">Продвинутый</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {availableTags.length > 0 && (
+                      <TagPicker
+                        availableTags={availableTags}
+                        selectedTags={newCourseTags}
+                        onChange={setNewCourseTags}
+                        label="Теги курса"
+                      />
+                    )}
                     <div>
                       <Label>Экзаменационные вопросы</Label>
                       <div className="space-y-2 mt-2">

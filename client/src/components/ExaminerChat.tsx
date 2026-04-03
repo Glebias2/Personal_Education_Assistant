@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Send, ArrowLeft, Loader2, GraduationCap } from "lucide-react";
-import { ExamQuestion, ExamStartResponse, ExamAnswerResponse, ExamSummaryResponse, ExamResultItem } from "@/types/models";
+import { ExamQuestion, ExamStartResponse, ExamAnswerResponse, ExamSummaryResponse, ExamResultItem } from "@/types";
 import { submitExamAnswer } from "@/lib/api";
 
 const API_BASE_URL = "http://localhost:8000";
@@ -49,7 +49,7 @@ export default function ExaminerChat({ courseId, courseTitle, studentId, onClose
   const startExam = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/courses/${effectiveCourseId}/exam/start`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/courses/${effectiveCourseId}/exam/start`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ student_id: studentId, question_count: questionCount, language: "ru" })
@@ -121,7 +121,7 @@ export default function ExaminerChat({ courseId, courseTitle, studentId, onClose
   // Получение итоговой сводки
   const fetchSummary = async (examId: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/courses/${effectiveCourseId}/summary?exam_id=${examId}`);
+      const response = await fetch(`${API_BASE_URL}/api/v1/courses/${effectiveCourseId}/summary?exam_id=${examId}`);
       if (!response.ok) throw new Error("Ошибка получения результатов");
 
       const data: ExamSummaryResponse = await response.json();

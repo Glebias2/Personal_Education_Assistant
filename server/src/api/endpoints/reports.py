@@ -4,29 +4,6 @@ from ..app import app
 from ..schemas.reports import SetReportStatusModel
 from models.enums import ReportStatus
 
-@app.get("/api/v1/courses/{teacher_id}/pending_reports", tags=["Отчёты"])
-async def get_pending_reports_for_teacher_legacy(teacher_id: int):
-    report_repository = ReportRepository()
-
-    reports = report_repository.get_teacher_pending_reports(teacher_id)
-    info_list = []
-
-    for part in reports:
-        report_id, student_id, course_title, lab_title, url = part
-        # legacy-ключ "student_id" раньше ошибочно содержал report_id,
-        # оставляем оба поля для обратной совместимости
-        info_list.append(
-            {
-                "student_id": student_id,
-                "report_id": report_id,
-                "course_title": course_title,
-                "lab_title": lab_title,
-                "url": url,
-            }
-        )
-
-    return {"reports": info_list}
-
 
 @app.get("/api/v1/teachers/{teacher_id}/reports/pending", tags=["Отчёты"])
 async def get_pending_reports_for_teacher(teacher_id: int):
