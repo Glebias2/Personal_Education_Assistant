@@ -1,2 +1,0 @@
-class InvalidFile(Exception):
-    pass
