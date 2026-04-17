@@ -129,6 +129,11 @@ def _create_materialized_view_ranking_stats(curs: cursor = None) -> None:
             END IF;
         END $$;
     """)
+    # Уникальный индекс нужен для REFRESH MATERIALIZED VIEW CONCURRENTLY
+    curs.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_course_ranking_stats_pk
+        ON course_ranking_stats (course_id)
+    """)
 
 
 def create_recommendations_tables():

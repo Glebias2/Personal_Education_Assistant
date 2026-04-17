@@ -20,3 +20,8 @@ class RegisterStudentModel(BaseModel):
     last_name: str
     characteristic: str | None = None
     interests: list[str] = []
+
+
+class UpdatePreferencesModel(BaseModel):
+    preferred_explanation_style: str
+    notes: str = ""

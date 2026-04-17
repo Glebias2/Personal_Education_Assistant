@@ -8,4 +8,6 @@ from .repositories import (
     TestResultRepository,
     ExamResultRepository,
     RecommendationRepository,
+    StudentPreferencesRepository,
+    ChatPreferencesRepository,
 )

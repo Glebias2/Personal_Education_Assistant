@@ -40,6 +40,20 @@ def _create_table_chat_messages(curs: cursor = None) -> None:
     curs.execute(query)
 
 
+@postgre_connection(_config)
+def _create_table_chat_preferences(curs: cursor = None) -> None:
+    query = """
+        CREATE TABLE IF NOT EXISTS chat_preferences (
+            chat_id INT PRIMARY KEY REFERENCES chats(id) ON DELETE CASCADE,
+            preferred_explanation_style TEXT,
+            notes TEXT,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """
+    curs.execute(query)
+
+
 def create_chats_tables():
     _create_table_chats()
     _create_table_chat_messages()
+    _create_table_chat_preferences()
