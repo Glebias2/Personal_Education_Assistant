@@ -27,9 +27,9 @@ ENV/
 
 # --- Node.js ---
 node_modules/
-client/node_modules/
-client/dist/
-client/bun.lockb
+client/
+frontend/node_modules/
+frontend/dist/
 
 # --- IDE ---
 .idea/
@@ -65,4 +65,7 @@ coverage.xml
 
 main_report/
 reports/
+report/
 .claude/
+.playwright-mcp/
+proxy_forwarder.py
