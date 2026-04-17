@@ -1,7 +1,12 @@
+import time
 from psycopg2.extensions import cursor
 
 from settings import EducationDatabaseConfig
 from ..connection import postgre_connection
+
+# TTL для обновления materialized view (10 минут)
+_mv_last_refresh: float = 0.0
+_MV_REFRESH_TTL: float = 600.0
 
 
 class RecommendationRepository:
@@ -51,14 +56,18 @@ class RecommendationRepository:
 
     @postgre_connection(__config)
     def refresh_ranking_stats(self, curs: cursor = None) -> None:
-        curs.execute("REFRESH MATERIALIZED VIEW course_ranking_stats")
+        curs.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY course_ranking_stats")
 
     # ── Рекомендации ──────────────────────────────────────────────────────────
 
     @postgre_connection(__config)
     def get_recommended_courses(self, student_id: int, limit: int = 50, curs: cursor = None) -> list[dict]:
-        # Обновляем MV перед запросом
-        curs.execute("REFRESH MATERIALIZED VIEW course_ranking_stats")
+        # Обновляем MV только если прошло более 10 минут (TTL-кэш)
+        global _mv_last_refresh
+        now = time.time()
+        if now - _mv_last_refresh > _MV_REFRESH_TTL:
+            curs.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY course_ranking_stats")
+            _mv_last_refresh = now
 
         query = """
             WITH max_vals AS (

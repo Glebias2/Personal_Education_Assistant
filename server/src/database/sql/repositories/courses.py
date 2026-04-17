@@ -22,6 +22,40 @@ class CourseRepository:
         return courses
 
     @postgre_connection(__config)
+    def get_student_courses_detailed(self, student_id: int, curs: cursor = None) -> list[tuple]:
+        """Возвращает полные данные курсов студента со статусом завершения.
+        Каждый ряд: (id, title, description, difficulty, created_at, labs_completed, exam_completed)
+        """
+        query = """
+            SELECT
+                c.id,
+                c.title,
+                c.description,
+                c.difficulty,
+                c.created_at::text,
+                CASE
+                    WHEN COUNT(l.id) = 0 THEN TRUE
+                    WHEN COUNT(r.id) FILTER (WHERE r.status = 'approved') = COUNT(l.id) THEN TRUE
+                    ELSE FALSE
+                END AS labs_completed,
+                EXISTS(
+                    SELECT 1 FROM exam_results er
+                    WHERE er.student_id = %(sid)s
+                      AND er.course_id = c.id
+                      AND er.completed = TRUE
+                ) AS exam_completed
+            FROM students_courses sc
+            JOIN courses c ON c.id = sc.course_id
+            LEFT JOIN labs l ON l.course_id = c.id
+            LEFT JOIN reports r ON r.lab_id = l.id AND r.student_id = %(sid)s
+            WHERE sc.student_id = %(sid)s
+            GROUP BY c.id, c.title, c.description, c.difficulty, c.created_at
+            ORDER BY c.id
+        """
+        curs.execute(query, {"sid": student_id})
+        return curs.fetchall()
+
+    @postgre_connection(__config)
     def get_teacher_courses(self, teacher_id: int, curs: cursor = None) -> list[tuple[int, str]]:
         query = """
             SELECT id, title

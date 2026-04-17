@@ -2,6 +2,7 @@ from fastapi import HTTPException
 
 from database.sql import RecommendationRepository
 from constants import PREDEFINED_TAGS
+from recommendations import RecommendationService
 
 from ..app import app
 from ..schemas.recommendations import RateCourseModel
@@ -15,29 +16,36 @@ def get_available_tags():
 @app.get("/api/v1/students/{student_id}/recommended-courses", tags=["Рекомендации"])
 def get_recommended_courses(student_id: int):
     repo = RecommendationRepository()
+    service = RecommendationService()
 
     # Проверяем наличие интересов у студента
     interests = repo.get_student_interests(student_id)
 
-    courses = repo.get_recommended_courses(student_id)
+    # Получаем ранжированные курсы через новый сервис (7 сигналов)
+    courses = service.get_ranked_courses(student_id)
 
-    # Определяем, можем ли рекомендовать
+    # Определяем, можем ли рекомендовать (нужны интересы + значимый score)
     has_recommendations = False
     recommended = []
     other = courses
 
     if interests and courses:
         top = courses[:3]
-        # Рекомендуем только если top score > 0.3 и есть совпадение по тегам
-        if top and top[0]["score"] > 0.3 and top[0].get("tag_match", 0) > 0:
+        # Рекомендуем только если у лидера score > 0.25 и есть совпадение по тегам
+        if top and top[0]["score"] > 0.25 and top[0].get("tag_match", 0) > 0:
             has_recommendations = True
             recommended = top
             other = courses[3:]
+
+    # Один дополнительный курс по чистому score, не попавший в top-3
+    # Работает даже когда has_recommendations=False — тогда other=все курсы
+    maybe_like = other[0] if other else None
 
     return {
         "recommended": recommended,
         "other": other,
         "has_recommendations": has_recommendations,
+        "maybe_like": maybe_like,
     }
 
 

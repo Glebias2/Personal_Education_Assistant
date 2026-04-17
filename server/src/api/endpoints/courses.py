@@ -37,8 +37,25 @@ def list_courses():
 @app.get("/api/v1/students/{student_id}/courses", tags=["Курсы"])
 def get_student_courses(student_id: int):
     course_repository = CourseRepository()
-    courses = course_repository.get_student_courses(student_id)
-    return [{"id": course_id, "title": title} for (course_id, title) in courses]
+    rec_repository = RecommendationRepository()
+
+    rows = course_repository.get_student_courses_detailed(student_id)
+    tags_map = rec_repository.get_all_course_tags()
+
+    result = []
+    for (cid, title, description, difficulty, created_at, labs_completed, exam_completed) in rows:
+        my_rating = rec_repository.get_course_rating(student_id=student_id, course_id=cid)
+        result.append({
+            "id": cid,
+            "title": title,
+            "description": description,
+            "difficulty": difficulty,
+            "created_at": created_at,
+            "tags": tags_map.get(cid, []),
+            "is_completed": bool(labs_completed) and bool(exam_completed),
+            "my_rating": my_rating,
+        })
+    return result
 
 
 @app.get("/api/v1/teachers/{teacher_id}/courses", tags=["Курсы"])
