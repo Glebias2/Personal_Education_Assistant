@@ -27,7 +27,8 @@ loguru==0.7.3
 python-multipart
 nltk
 natasha
-langgraph>=0.2.0
+langgraph==1.0.8
+langgraph-prebuilt==1.0.8
 aiohttp
 bs4
 fastmcp>=2.0.0

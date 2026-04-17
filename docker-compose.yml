@@ -22,8 +22,19 @@ services:
       EDUCATION_DATABASE_PASS: ${EDUCATION_DATABASE_PASS}
 
       TZ: Europe/Moscow
+
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      http_proxy: ${HTTP_PROXY:-}
+      https_proxy: ${HTTPS_PROXY:-}
+      GRPC_PROXY: ${HTTP_PROXY:-}
+      NO_PROXY: weaviate,sql_database,sql-database,localhost,127.0.0.1,t2v-transformers
+      no_proxy: weaviate,sql_database,sql-database,localhost,127.0.0.1,t2v-transformers
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - uploads_data:/app/uploads
+      - ./server/src:/app/src
 
   # frontend:
   #   build: ./client
@@ -58,6 +69,8 @@ services:
   sql_database:
     image: postgres:18
     container_name: sql-database
+    ports:
+      - "5432:5432"
     environment:
       POSTGRES_DB: ${EDUCATION_DATABASE_NAME}
       POSTGRES_USER: ${EDUCATION_DATABASE_USER}
