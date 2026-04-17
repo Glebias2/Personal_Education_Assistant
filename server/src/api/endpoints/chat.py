@@ -92,7 +92,7 @@ def send_message(chat_id: int, message: str = Form(...)):
         else:
             history.append(AIMessage(content=content))
 
-    response = ask(storage_id, message, history, student_id, course_id)
+    response = ask(storage_id, message, history, student_id, course_id, chat_id)
 
     chat_repository.add_message(chat_id, "human", message)
     chat_repository.add_message(chat_id, "ai", response)

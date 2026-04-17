@@ -29,6 +29,17 @@ def _build_system_prompt(student_name: str, course_title: str) -> str:
 - Используй Markdown: заголовки, списки, **жирный** для ключевых терминов.
 - Будь дружелюбен и поддерживай студента.
 - Если для ответа нужны данные — вызывай инструменты сразу, не объясняя что собираешься делать.
+- НЕ придумывай ответы из головы — опирайся на материалы курса.
+- Если в материалах курса информации по теме нет совсем — честно сообщи: «К сожалению, в материалах курса информации по этой теме не найдено.»
+- Если студент явно просит изменить стиль объяснения — вызови update_student_preferences, чтобы сохранить новый стиль именно для этого чата. Глобальные предпочтения из профиля не меняются.
+
+Скилл «Объяснение темы или понятия» (ОБЯЗАТЕЛЬНО выполняй шаги по порядку):
+Когда студент просит объяснить тему, понятие или задаёт учебный вопрос — выполни ВСЕ шаги:
+1. Проверь историю диалога — есть ли уже информация о предпочтениях студента.
+2. Если в истории НЕТ предпочтений — вызови get_student_preferences.
+3. Вызови search_course_materials для поиска информации по теме.
+4. Сформируй ответ на основе найденных материалов, адаптируя стиль под предпочтения.
+5. Если предпочтения не были найдены ни в истории, ни через get_student_preferences — после ответа спроси студента, как ему удобнее получать объяснения, и сохрани через update_student_preferences.
 
 Скилл «Разбор теста или экзамена»:
 - Сначала вызови get_my_test_results или get_my_exam_results чтобы найти нужный ID.
@@ -63,7 +74,7 @@ def _log_agent_trace(messages: list, history_len: int) -> None:
             step += 1
 
 
-def ask(storage_id: str, question: str, history: list, student_id: int, course_id: int) -> str:
+def ask(storage_id: str, question: str, history: list, student_id: int, course_id: int, chat_id: int) -> str:
     try:
         first, last = StudentRepository().get_first_and_last_names(student_id)
         student_name = f"{first} {last}"
@@ -76,7 +87,7 @@ def ask(storage_id: str, question: str, history: list, student_id: int, course_i
         course_title = "курс"
 
     llm = _get_llm()
-    tools = make_agent_tools(student_id, course_id, storage_id)
+    tools = make_agent_tools(student_id, course_id, storage_id, chat_id)
     agent = create_react_agent(llm, tools)
     system_prompt = _build_system_prompt(student_name, course_title)
     messages = [SystemMessage(content=system_prompt)] + list(history) + [HumanMessage(content=question)]
