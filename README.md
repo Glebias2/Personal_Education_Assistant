@@ -43,7 +43,7 @@ docker compose up --build
 В другом терминале — фронтенд:
 
 ```bash
-cd client
+cd frontend
 npm install
 npm run dev
 ```
