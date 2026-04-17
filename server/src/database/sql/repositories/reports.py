@@ -86,6 +86,26 @@ class ReportRepository:
         return curs.fetchall()
 
     @postgre_connection(__config)
+    def get_lab_funnel(self, course_id: int, curs: cursor = None) -> list[tuple]:
+        """Воронка сдачи лаб: (id, number, title, enrolled, submitted, approved, rejected)."""
+        query = """
+            SELECT l.id, l.number, l.title,
+                   COUNT(DISTINCT sc.student_id)                                          AS enrolled,
+                   COUNT(DISTINCT r.student_id)                                           AS submitted,
+                   COUNT(DISTINCT r.student_id) FILTER (WHERE r.status = 'approved')     AS approved,
+                   COUNT(DISTINCT r.student_id) FILTER (WHERE r.status = 'not-approved') AS rejected
+            FROM labs l
+            JOIN courses c ON c.id = l.course_id
+            JOIN students_courses sc ON sc.course_id = c.id
+            LEFT JOIN reports r ON r.lab_id = l.id
+            WHERE l.course_id = %(cid)s
+            GROUP BY l.id, l.number, l.title
+            ORDER BY l.number
+        """
+        curs.execute(query, {"cid": course_id})
+        return curs.fetchall()
+
+    @postgre_connection(__config)
     def delete(self, report_id: int, curs: cursor = None) -> bool:
         # NEW FUNCTIONALITY: удаление отчёта
         query = """

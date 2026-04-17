@@ -142,6 +142,11 @@ def get_course_analytics(course_id: int):
     exam_stats = exam_repo.get_course_analytics(course_id)
     report_rows = report_repo.get_course_report_analytics(course_id)
     timeline = test_repo.get_course_timeline(course_id)
+    topic_accuracy = test_repo.get_topic_accuracy(course_id)
+    hard_questions = test_repo.get_hard_questions(course_id)
+    difficulty_breakdown = test_repo.get_difficulty_breakdown(course_id)
+    verdict_dist = exam_repo.get_verdict_distribution(course_id)
+    lab_funnel = report_repo.get_lab_funnel(course_id)
 
     return {
         "test_averages": [
@@ -184,6 +189,50 @@ def get_course_analytics(course_id: int):
                 "created_at": r[5],
             }
             for r in (timeline or [])
+        ],
+        "topic_accuracy": [
+            {
+                "topic": r[0],
+                "total_q": r[1],
+                "correct_q": r[2],
+                "accuracy_pct": float(r[3]) if r[3] is not None else 0.0,
+                "test_count": r[4],
+            }
+            for r in (topic_accuracy or [])
+        ],
+        "hard_questions": [
+            {
+                "question_text": r[0],
+                "attempts": r[1],
+                "correct": r[2],
+                "success_rate": float(r[3]) if r[3] is not None else 0.0,
+                "topic": r[4],
+            }
+            for r in (hard_questions or [])
+        ],
+        "difficulty_breakdown": [
+            {
+                "difficulty": r[0],
+                "test_count": r[1],
+                "avg_pct": float(r[2]) if r[2] is not None else 0.0,
+            }
+            for r in (difficulty_breakdown or [])
+        ],
+        "verdict_distribution": [
+            {"verdict": r[0], "count": r[1]}
+            for r in (verdict_dist or [])
+        ],
+        "lab_funnel": [
+            {
+                "id": r[0],
+                "number": r[1],
+                "title": r[2],
+                "enrolled": r[3],
+                "submitted": r[4],
+                "approved": r[5],
+                "rejected": r[6],
+            }
+            for r in (lab_funnel or [])
         ],
     }
 

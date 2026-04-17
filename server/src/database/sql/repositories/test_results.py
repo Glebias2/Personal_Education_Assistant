@@ -112,6 +112,61 @@ class TestResultRepository:
         return curs.fetchall()
 
     @postgre_connection(__config)
+    def get_topic_accuracy(self, course_id: int, curs: cursor = None) -> list[tuple]:
+        """Точность по темам: (topic, total_q, correct_q, accuracy_pct, test_count)."""
+        query = """
+            SELECT tr.topic,
+                   COUNT(tra.id)                                                    AS total_q,
+                   SUM(CASE WHEN tra.is_correct THEN 1 ELSE 0 END)                 AS correct_q,
+                   ROUND(100.0 * SUM(CASE WHEN tra.is_correct THEN 1 ELSE 0 END)
+                         / NULLIF(COUNT(tra.id), 0), 1)                             AS accuracy_pct,
+                   COUNT(DISTINCT tr.id)                                            AS test_count
+            FROM test_results tr
+            JOIN test_result_answers tra ON tra.test_result_id = tr.id
+            WHERE tr.course_id = %(cid)s AND tr.topic IS NOT NULL
+            GROUP BY tr.topic
+            ORDER BY accuracy_pct ASC
+        """
+        curs.execute(query, {"cid": course_id})
+        return curs.fetchall()
+
+    @postgre_connection(__config)
+    def get_hard_questions(self, course_id: int, limit: int = 8, curs: cursor = None) -> list[tuple]:
+        """Самые сложные вопросы: (question_text, attempts, correct, success_rate, topic)."""
+        query = """
+            SELECT tra.question_text,
+                   COUNT(*)                                                         AS attempts,
+                   SUM(CASE WHEN tra.is_correct THEN 1 ELSE 0 END)                 AS correct,
+                   ROUND(100.0 * SUM(CASE WHEN tra.is_correct THEN 1 ELSE 0 END)
+                         / COUNT(*), 1)                                             AS success_rate,
+                   tr.topic
+            FROM test_result_answers tra
+            JOIN test_results tr ON tra.test_result_id = tr.id
+            WHERE tr.course_id = %(cid)s
+            GROUP BY tra.question_text, tr.topic
+            HAVING COUNT(*) >= 2
+            ORDER BY success_rate ASC
+            LIMIT %(limit)s
+        """
+        curs.execute(query, {"cid": course_id, "limit": limit})
+        return curs.fetchall()
+
+    @postgre_connection(__config)
+    def get_difficulty_breakdown(self, course_id: int, curs: cursor = None) -> list[tuple]:
+        """Результаты по уровню сложности: (difficulty, test_count, avg_pct)."""
+        query = """
+            SELECT tr.difficulty,
+                   COUNT(DISTINCT tr.id)                 AS test_count,
+                   ROUND(AVG(tr.percentage)::numeric, 1) AS avg_pct
+            FROM test_results tr
+            WHERE tr.course_id = %(cid)s
+            GROUP BY tr.difficulty
+            ORDER BY tr.difficulty
+        """
+        curs.execute(query, {"cid": course_id})
+        return curs.fetchall()
+
+    @postgre_connection(__config)
     def get_answers(self, test_result_id: int, curs: cursor = None) -> list[tuple]:
         query = """
             SELECT question_num, question_text, options, user_answer,

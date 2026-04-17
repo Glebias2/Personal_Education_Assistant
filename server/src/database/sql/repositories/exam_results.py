@@ -90,6 +90,21 @@ class ExamResultRepository:
         return curs.fetchall()
 
     @postgre_connection(__config)
+    def get_verdict_distribution(self, course_id: int, curs: cursor = None) -> list[tuple]:
+        """Распределение вердиктов экзамена: (verdict, cnt)."""
+        query = """
+            SELECT era.verdict,
+                   COUNT(*) AS cnt
+            FROM exam_result_answers era
+            JOIN exam_results er ON era.exam_result_id = er.id
+            WHERE er.course_id = %(cid)s AND er.completed = TRUE
+            GROUP BY era.verdict
+            ORDER BY cnt DESC
+        """
+        curs.execute(query, {"cid": course_id})
+        return curs.fetchall()
+
+    @postgre_connection(__config)
     def get_answers(self, exam_result_id: int, curs: cursor = None) -> list[tuple]:
         query = """
             SELECT question_id, question_text, user_answer, verdict,
