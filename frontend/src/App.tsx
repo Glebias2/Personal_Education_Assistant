@@ -28,6 +28,7 @@ import PendingReports from "@/pages/teacher/PendingReports";
 import Analytics from "@/pages/teacher/Analytics";
 import Students from "@/pages/teacher/Students";
 import Requests from "@/pages/teacher/Requests";
+import CourseFiles from "@/pages/teacher/CourseFiles";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
@@ -71,6 +72,7 @@ export default function App() {
               <Route path="/teacher/courses/:id/analytics" element={<Analytics />} />
               <Route path="/teacher/courses/:id/students" element={<Students />} />
               <Route path="/teacher/courses/:id/requests" element={<Requests />} />
+              <Route path="/teacher/courses/:id/files" element={<CourseFiles />} />
               <Route path="/teacher/reports" element={<PendingReports />} />
             </Route>
 

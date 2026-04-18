@@ -94,8 +94,8 @@ export const coursesApi = {
       (r) => r.files
     ),
 
-  deleteFile: (courseId: number, fileId: string) =>
-    apiFetch(`/api/v1/courses/${courseId}/files/${fileId}`, {
+  deleteFile: (courseId: number, fileRecordId: number) =>
+    apiFetch(`/api/v1/courses/${courseId}/files/${fileRecordId}`, {
       method: "DELETE",
     }),
 

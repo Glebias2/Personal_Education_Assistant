@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/authStore";
@@ -42,16 +42,15 @@ export default function CourseEdit() {
     enabled: !!courseId,
   });
 
-  // Load existing course data
-  useState(() => {
+  useEffect(() => {
     if (course) {
       setTitle(course.title);
-      setDescription(course.description);
+      setDescription(course.description ?? "");
       setDifficulty(course.difficulty);
       setTags(course.tags ?? []);
       setExamQuestions(course.exam_questions ?? "");
     }
-  });
+  }, [course]);
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -84,7 +83,7 @@ export default function CourseEdit() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (fileId: string) => coursesApi.deleteFile(courseId!, fileId),
+    mutationFn: (fileRecordId: number) => coursesApi.deleteFile(courseId!, fileRecordId),
     onSuccess: () => {
       toast.success("Файл удалён");
       refetchFiles();
@@ -101,8 +100,11 @@ export default function CourseEdit() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <Link to="/teacher/courses" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-        <ArrowLeft className="w-4 h-4" /> Мои курсы
+      <Link
+        to={isNew ? "/teacher/courses" : `/teacher/courses/${courseId}`}
+        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" /> {isNew ? "Мои курсы" : "К курсу"}
       </Link>
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
@@ -173,18 +175,22 @@ export default function CourseEdit() {
           <h2 className="text-xl font-heading text-foreground">Материалы курса</h2>
           <p className="text-sm text-muted-foreground">PDF, DOCX, TXT — загружаются в Weaviate для AI</p>
 
-          <label className="cursor-pointer inline-block">
+          <label className={cn("cursor-pointer inline-block", uploadMutation.isPending && "pointer-events-none opacity-60")}>
             <span className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted transition-colors">
-              <Upload className="w-4 h-4" /> Загрузить файлы
+              {uploadMutation.isPending ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Загрузка...</>
+              ) : (
+                <><Upload className="w-4 h-4" /> Загрузить файлы</>
+              )}
             </span>
-            <input type="file" multiple accept=".pdf,.docx,.txt" className="hidden" onChange={handleFileUpload} />
+            <input type="file" multiple accept=".pdf,.docx,.txt" className="hidden" onChange={handleFileUpload} disabled={uploadMutation.isPending} />
           </label>
 
           {files?.map((file) => (
             <div key={file.id} className="flex items-center gap-3 p-3 rounded-xl bg-surface border border-border">
               <FileText className="w-5 h-5 text-muted-foreground shrink-0" />
               <span className="flex-1 text-sm text-foreground truncate">{file.filename}</span>
-              <button onClick={() => deleteMutation.mutate(file.file_id)} className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
+              <button onClick={() => deleteMutation.mutate(file.id)} className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
                 <Trash2 className="w-4 h-4" />
               </button>
             </div>

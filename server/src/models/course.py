@@ -8,7 +8,7 @@ class Course(BaseModel):
 
 class NewCourse(BaseModel):
     title: str
-    teacher_id: str
+    teacher_id: int
     exam_questions: str
     description: str | None = None
     difficulty: str = "intermediate"

@@ -68,7 +68,7 @@ export default function CourseView() {
           { to: `/teacher/courses/${courseId}/students`, icon: Users, label: `Студенты (${studentsData?.students?.length ?? 0})` },
           { to: `/teacher/courses/${courseId}/requests`, icon: UserCheck, label: `Заявки (${pendingRequests.length})` },
           { to: `/teacher/courses/${courseId}/analytics`, icon: BarChart3, label: "Аналитика" },
-          { to: `/teacher/courses/${courseId}/edit`, icon: Settings, label: "Файлы" },
+          { to: `/teacher/courses/${courseId}/files`, icon: Settings, label: "Файлы" },
         ].map((action) => (
           <Link key={action.to + action.label} to={action.to}
             className="flex flex-col items-center gap-2 p-4 rounded-xl bg-card border border-border hover:border-primary/30 transition-all group">
