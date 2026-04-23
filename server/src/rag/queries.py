@@ -131,7 +131,7 @@ def query_course_labs(course_id: int) -> list[dict]:
     ]
 
 
-def query_search_materials(storage_id: str, query: str, k: int = 8, alpha: float = 0.75) -> list[str]:
+def query_search_materials(storage_id: str, query: str, k: int = 5, alpha: float = 0.85) -> list[str]:
     """Гибридный поиск по материалам курса. Возвращает список текстовых чанков."""
     vector_storage = StorageManager.get_vector_storage(storage_id)
     docs = vector_storage.hybrid_search(query, k=k, alpha=alpha)
