@@ -1,9 +1,4 @@
-# --- Сам .gitignore и файлы CLAUDE (личные, не для GitHub) ---
-.gitignore
-CLAUDE.md
-**/CLAUDE.md
-
-# --- Секреты ---
+# --- Env ---
 .env
 server/src/.env
 
@@ -27,7 +22,6 @@ ENV/
 
 # --- Node.js ---
 node_modules/
-client/
 frontend/node_modules/
 frontend/dist/
 
@@ -66,6 +60,4 @@ coverage.xml
 main_report/
 reports/
 report/
-.claude/
-.playwright-mcp/
 proxy_forwarder.py
