@@ -38,7 +38,9 @@ export default function Profile() {
   });
 
   useEffect(() => {
-    if (interests) setSelectedInterests(interests);
+    if (interests) {
+      setSelectedInterests(interests.filter((t) => (TAGS as readonly string[]).includes(t)));
+    }
   }, [interests]);
 
   useEffect(() => {
@@ -74,8 +76,10 @@ export default function Profile() {
   };
 
   const interestsChanged =
-    JSON.stringify(selectedInterests.sort()) !==
-    JSON.stringify((interests ?? []).sort());
+    JSON.stringify([...selectedInterests].sort()) !==
+    JSON.stringify(
+      (interests ?? []).filter((t) => (TAGS as readonly string[]).includes(t)).sort()
+    );
 
   const prefsChanged =
     style !== (preferences?.preferred_explanation_style ?? "") ||

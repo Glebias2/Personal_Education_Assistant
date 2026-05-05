@@ -32,6 +32,7 @@ export default function ExamPage() {
   const [loading, setLoading] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const sendingRef = useRef(false);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -61,7 +62,8 @@ export default function ExamPage() {
   };
 
   const handleSend = async () => {
-    if (!input.trim() || loading || !examId || completed) return;
+    if (!input.trim() || sendingRef.current || !examId || completed) return;
+    sendingRef.current = true;
 
     const userAnswer = input.trim();
     setInput("");
@@ -75,18 +77,18 @@ export default function ExamPage() {
       });
 
       const evalMsg = formatEvaluation(data.evaluation);
+      const nextQ = data.next_question;
 
-      if (data.next_question) {
+      if (nextQ) {
         setMessages((prev) => [
           ...prev,
           { role: "examiner", content: evalMsg, evaluation: data.evaluation },
           {
             role: "examiner",
-            content: `Вопрос ${data.next_question.id}:\n${data.next_question.text}`,
+            content: `Вопрос ${nextQ.id}:\n${nextQ.text}`,
           },
         ]);
       } else {
-        // Last question answered — show eval then fetch summary
         setMessages((prev) => [
           ...prev,
           { role: "examiner", content: evalMsg, evaluation: data.evaluation },
@@ -97,6 +99,7 @@ export default function ExamPage() {
       toast.error("Ошибка отправки ответа");
     } finally {
       setLoading(false);
+      sendingRef.current = false;
     }
   };
 
